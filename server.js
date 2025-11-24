@@ -14,9 +14,10 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-// Configurar a Inteligência do Google (Usando gemini-pro para garantir compatibilidade)
+// Configurar a Inteligência do Google (Usando 1.5 Flash)
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "chave_faltando");
-const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+// O modelo 1.5-flash é o mais estável para contas novas/gratuitas
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
 // --- FUNÇÃO QUE PENSA (IA) ---
 async function perguntarParaIA(textoUsuario) {
@@ -24,9 +25,8 @@ async function perguntarParaIA(textoUsuario) {
 
   try {
     const prompt = `
-      Você é o AgroZap, um agrônomo virtual especialista em Café.
-      Responda de forma curta, técnica mas amigável (use emojis).
-      Se perguntarem de veneno, diga que não pode receitar e mande procurar um agrônomo.
+      Você é o AgroZap, um assistente agronômico.
+      Responda de forma curta e amigável (use emojis).
       Pergunta do produtor: "${textoUsuario}"
     `;
     
@@ -35,7 +35,8 @@ async function perguntarParaIA(textoUsuario) {
     return response.text();
   } catch (error) {
     console.error("Erro na IA:", error);
-    return "Companheiro, estou ajustando meus satélites (Erro na IA). Tente de novo em breve.";
+    // Mensagem de fallback se der erro na IA
+    return "Companheiro, tive um problema técnico momentâneo. Tente perguntar de novo em alguns segundos.";
   }
 }
 
@@ -68,7 +69,7 @@ app.post('/webhook', async (req, res) => {
       const from = message.from;
       const type = message.type;
 
-      // Marca como lido sem travar se der erro
+      // Marca como lido sem travar
       markAsRead(message.id).catch(() => {});
 
       let resposta = "";
@@ -77,11 +78,7 @@ app.post('/webhook', async (req, res) => {
         const texto = message.text.body;
         console.log(`Mensagem recebida de ${from}: ${texto}`);
         resposta = await perguntarParaIA(texto);
-      } 
-      else if (type === 'audio') {
-        resposta = "🎙️ Recebi seu áudio! (Áudio em manutenção).";
-      }
-      else {
+      } else {
         resposta = "Por enquanto só entendo texto, companheiro!";
       }
 
@@ -107,8 +104,7 @@ async function sendWhatsAppMessage(to, text) {
       }
     });
   } catch (err) {
-    // Aqui vamos ver se o erro é de número bloqueado
-    console.error('ERRO AO ENVIAR ZAP:', err.response ? err.response.data : err.message);
+    console.error('ERRO ZAP:', err.message);
   }
 }
 
