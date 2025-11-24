@@ -15,9 +15,9 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 // Configurar a Inteligência do Google
-// MUDANÇA AQUI: Usando 'gemini-pro' (Versão Gratuita e Estável)
+// MUDANÇA: Usando 'gemini-1.5-flash' que é o padrão novo e gratuito
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "chave_faltando");
-const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
 // --- FUNÇÃO QUE PENSA (IA) ---
 async function perguntarParaIA(textoUsuario) {
@@ -36,13 +36,14 @@ async function perguntarParaIA(textoUsuario) {
     return response.text();
   } catch (error) {
     console.error("Erro na IA:", error);
-    return "Companheiro, minha inteligência travou momentaneamente. Tente de novo em 1 minuto.";
+    // Retorna uma mensagem de erro amigável para não travar o Zap
+    return "Companheiro, tive um problema técnico momentâneo. Tente perguntar de novo em alguns segundos.";
   }
 }
 
 // --- ROTA DA PORTA DA FRENTE ---
 app.get('/', (req, res) => {
-  res.send('<h1>🌱 AgroZap está VIVO!</h1><p>Modelo Ativo: Gemini Pro (Modo Gratuito)</p>');
+  res.send('<h1>🌱 AgroZap 1.5 Flash está VIVO!</h1>');
 });
 
 // --- ROTA DE VERIFICAÇÃO DO WHATSAPP ---
@@ -69,7 +70,8 @@ app.post('/webhook', async (req, res) => {
       const from = message.from;
       const type = message.type;
 
-      await markAsRead(message.id);
+      // Tenta marcar como lido, mas não trava se der erro
+      markAsRead(message.id).catch(e => console.log("Erro ao marcar lido"));
 
       let resposta = "";
 
@@ -79,7 +81,7 @@ app.post('/webhook', async (req, res) => {
         resposta = await perguntarParaIA(texto);
       } 
       else if (type === 'audio') {
-        resposta = "🎙️ Recebi seu áudio! (O Gemini Pro é ótimo, mas nesta versão eu ainda não ativei a audição dele).";
+        resposta = "🎙️ Recebi seu áudio! (Nesta versão o áudio ainda não está ativado).";
       }
       else {
         resposta = "Por enquanto só entendo texto, companheiro!";
@@ -107,16 +109,14 @@ async function sendWhatsAppMessage(to, text) {
       }
     });
   } catch (err) {
-    console.error('Erro ao enviar zap:', err.message);
+    console.error('Erro ao enviar zap (Status 400):', err.response ? err.response.data : err.message);
   }
 }
 
 async function markAsRead(id) {
-  try {
-    await axios.post(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
-      messaging_product: 'whatsapp', status: 'read', message_id: id,
-    }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` } });
-  } catch (e) {}
+  await axios.post(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
+    messaging_product: 'whatsapp', status: 'read', message_id: id,
+  }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}` } });
 }
 
 app.listen(PORT, '0.0.0.0', () => {
