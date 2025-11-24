@@ -14,10 +14,9 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-// Configurar a Inteligência do Google
-// MUDANÇA: Usando 'gemini-1.5-flash' que é o padrão novo e gratuito
+// Configurar a Inteligência do Google (Usando gemini-pro para garantir compatibilidade)
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "chave_faltando");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+const model = genAI.getGenerativeModel({ model: "gemini-pro"});
 
 // --- FUNÇÃO QUE PENSA (IA) ---
 async function perguntarParaIA(textoUsuario) {
@@ -36,14 +35,13 @@ async function perguntarParaIA(textoUsuario) {
     return response.text();
   } catch (error) {
     console.error("Erro na IA:", error);
-    // Retorna uma mensagem de erro amigável para não travar o Zap
-    return "Companheiro, tive um problema técnico momentâneo. Tente perguntar de novo em alguns segundos.";
+    return "Companheiro, estou ajustando meus satélites (Erro na IA). Tente de novo em breve.";
   }
 }
 
 // --- ROTA DA PORTA DA FRENTE ---
 app.get('/', (req, res) => {
-  res.send('<h1>🌱 AgroZap 1.5 Flash está VIVO!</h1>');
+  res.send('<h1>🌱 AgroZap está VIVO!</h1>');
 });
 
 // --- ROTA DE VERIFICAÇÃO DO WHATSAPP ---
@@ -70,8 +68,8 @@ app.post('/webhook', async (req, res) => {
       const from = message.from;
       const type = message.type;
 
-      // Tenta marcar como lido, mas não trava se der erro
-      markAsRead(message.id).catch(e => console.log("Erro ao marcar lido"));
+      // Marca como lido sem travar se der erro
+      markAsRead(message.id).catch(() => {});
 
       let resposta = "";
 
@@ -81,7 +79,7 @@ app.post('/webhook', async (req, res) => {
         resposta = await perguntarParaIA(texto);
       } 
       else if (type === 'audio') {
-        resposta = "🎙️ Recebi seu áudio! (Nesta versão o áudio ainda não está ativado).";
+        resposta = "🎙️ Recebi seu áudio! (Áudio em manutenção).";
       }
       else {
         resposta = "Por enquanto só entendo texto, companheiro!";
@@ -109,7 +107,8 @@ async function sendWhatsAppMessage(to, text) {
       }
     });
   } catch (err) {
-    console.error('Erro ao enviar zap (Status 400):', err.response ? err.response.data : err.message);
+    // Aqui vamos ver se o erro é de número bloqueado
+    console.error('ERRO AO ENVIAR ZAP:', err.response ? err.response.data : err.message);
   }
 }
 
