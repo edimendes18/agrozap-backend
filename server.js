@@ -15,8 +15,9 @@ const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 // Configurar a Inteligência do Google
+// MUDANÇA AQUI: Usando 'gemini-pro' (Versão Gratuita e Estável)
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "chave_faltando");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+const model = genAI.getGenerativeModel({ model: "gemini-pro"});
 
 // --- FUNÇÃO QUE PENSA (IA) ---
 async function perguntarParaIA(textoUsuario) {
@@ -35,15 +36,13 @@ async function perguntarParaIA(textoUsuario) {
     return response.text();
   } catch (error) {
     console.error("Erro na IA:", error);
-    return "Desculpe companheiro, minha inteligência travou momentaneamente.";
+    return "Companheiro, minha inteligência travou momentaneamente. Tente de novo em 1 minuto.";
   }
 }
 
-// ==========================================================
-// 👇 AQUI ESTÁ A CORREÇÃO: A PORTA DA FRENTE! 👇
-// ==========================================================
+// --- ROTA DA PORTA DA FRENTE ---
 app.get('/', (req, res) => {
-  res.send('<h1>🌱 AgroZap está VIVO!</h1><p>O robô está pronto para trabalhar.</p>');
+  res.send('<h1>🌱 AgroZap está VIVO!</h1><p>Modelo Ativo: Gemini Pro (Modo Gratuito)</p>');
 });
 
 // --- ROTA DE VERIFICAÇÃO DO WHATSAPP ---
@@ -60,7 +59,7 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-// --- ROTA DE MENSAGENS (Onde chegam os zaps) ---
+// --- ROTA DE MENSAGENS ---
 app.post('/webhook', async (req, res) => {
   const body = req.body;
 
@@ -80,7 +79,7 @@ app.post('/webhook', async (req, res) => {
         resposta = await perguntarParaIA(texto);
       } 
       else if (type === 'audio') {
-        resposta = "🎙️ Recebi seu áudio! (Nesta versão de teste eu ainda não transcrevo, mas sei que você mandou áudio).";
+        resposta = "🎙️ Recebi seu áudio! (O Gemini Pro é ótimo, mas nesta versão eu ainda não ativei a audição dele).";
       }
       else {
         resposta = "Por enquanto só entendo texto, companheiro!";
@@ -120,7 +119,6 @@ async function markAsRead(id) {
   } catch (e) {}
 }
 
-// Ligar o servidor (Ouvindo em qualquer endereço 0.0.0.0)
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`AgroZap rodando na porta ${PORT}`);
 });
