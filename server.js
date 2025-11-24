@@ -1,7 +1,3 @@
-/**
- * AGROZAP CAFÉ - VERSÃO CORRIGIDA (COM PORTA DA FRENTE) 🚪
- */
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
