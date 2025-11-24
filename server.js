@@ -14,9 +14,9 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-// Configurar a Inteligência do Google (Usando 1.5 Flash)
+// Configurar a Inteligência do Google
+// MUDANÇA CRÍTICA: Usando 'gemini-1.5-flash' que é o padrão atual
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "chave_faltando");
-// O modelo 1.5-flash é o mais estável para contas novas/gratuitas
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
 // --- FUNÇÃO QUE PENSA (IA) ---
@@ -25,8 +25,8 @@ async function perguntarParaIA(textoUsuario) {
 
   try {
     const prompt = `
-      Você é o AgroZap, um assistente agronômico.
-      Responda de forma curta e amigável (use emojis).
+      Você é o AgroZap, um assistente agronômico especialista em Café.
+      Responda de forma curta, técnica mas amigável (use emojis).
       Pergunta do produtor: "${textoUsuario}"
     `;
     
@@ -35,14 +35,13 @@ async function perguntarParaIA(textoUsuario) {
     return response.text();
   } catch (error) {
     console.error("Erro na IA:", error);
-    // Mensagem de fallback se der erro na IA
-    return "Companheiro, tive um problema técnico momentâneo. Tente perguntar de novo em alguns segundos.";
+    return "Companheiro, minha inteligência travou momentaneamente. Tente de novo em alguns segundos.";
   }
 }
 
 // --- ROTA DA PORTA DA FRENTE ---
 app.get('/', (req, res) => {
-  res.send('<h1>🌱 AgroZap está VIVO!</h1>');
+  res.send('<h1>🌱 AgroZap (Flash) está VIVO!</h1>');
 });
 
 // --- ROTA DE VERIFICAÇÃO DO WHATSAPP ---
@@ -66,19 +65,25 @@ app.post('/webhook', async (req, res) => {
   if (body.object) {
     if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages) {
       const message = body.entry[0].changes[0].value.messages[0];
-      const from = message.from;
-      const type = message.type;
+      const from = message.from; // Quem mandou
+      
+      // Ignora mensagens de status (leitura/entrega) para não dar erro
+      if (!message.text && !message.audio) {
+        res.sendStatus(200);
+        return;
+      }
 
       // Marca como lido sem travar
       markAsRead(message.id).catch(() => {});
 
       let resposta = "";
 
-      if (type === 'text') {
+      if (message.type === 'text') {
         const texto = message.text.body;
         console.log(`Mensagem recebida de ${from}: ${texto}`);
         resposta = await perguntarParaIA(texto);
-      } else {
+      } 
+      else {
         resposta = "Por enquanto só entendo texto, companheiro!";
       }
 
@@ -104,7 +109,8 @@ async function sendWhatsAppMessage(to, text) {
       }
     });
   } catch (err) {
-    console.error('ERRO ZAP:', err.message);
+    // Se der erro de número bloqueado, vai aparecer aqui no log
+    console.error('ERRO ZAP (Provavelmente número não autorizado):', err.response ? err.response.data : err.message);
   }
 }
 
