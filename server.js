@@ -1,5 +1,5 @@
 /**
- * AGROZAP CAFE - VERSAO INICIANTE (GOOGLE GEMINI)
+ * AGROZAP CAFÉ - VERSÃO CORRIGIDA (COM PORTA DA FRENTE) 🚪
  */
 
 const express = require('express');
@@ -18,19 +18,19 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
-// Configurar a Inteligencia do Google
+// Configurar a Inteligência do Google
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "chave_faltando");
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
-// --- FUNCAO QUE PENSA (IA) ---
+// --- FUNÇÃO QUE PENSA (IA) ---
 async function perguntarParaIA(textoUsuario) {
-  if (!GOOGLE_API_KEY) return "Erro: Falta a chave do Google no Railway.";
+  if (!GOOGLE_API_KEY) return "⚠️ Erro: Falta a chave do Google no Railway.";
 
   try {
     const prompt = `
-      Voce é o AgroZap, um agronomo virtual especialista em Cafe.
-      Responda de forma curta, tecnica mas amigavel.
-      Se perguntarem de veneno, diga que nao pode receitar e mande procurar um agronomo.
+      Você é o AgroZap, um agrônomo virtual especialista em Café.
+      Responda de forma curta, técnica mas amigável (use emojis).
+      Se perguntarem de veneno, diga que não pode receitar e mande procurar um agrônomo.
       Pergunta do produtor: "${textoUsuario}"
     `;
     
@@ -39,25 +39,32 @@ async function perguntarParaIA(textoUsuario) {
     return response.text();
   } catch (error) {
     console.error("Erro na IA:", error);
-    return "Desculpe companheiro, minha inteligencia travou momentaneamente.";
+    return "Desculpe companheiro, minha inteligência travou momentaneamente.";
   }
 }
 
-// --- ROTA DE VERIFICACAO ---
+// ==========================================================
+// 👇 AQUI ESTÁ A CORREÇÃO: A PORTA DA FRENTE! 👇
+// ==========================================================
+app.get('/', (req, res) => {
+  res.send('<h1>🌱 AgroZap está VIVO!</h1><p>O robô está pronto para trabalhar.</p>');
+});
+
+// --- ROTA DE VERIFICAÇÃO DO WHATSAPP ---
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
   if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log("Conexao verificada!");
+    console.log("✅ Conexão verificada!");
     res.status(200).send(challenge);
   } else {
     res.sendStatus(403);
   }
 });
 
-// --- ROTA DE MENSAGENS ---
+// --- ROTA DE MENSAGENS (Onde chegam os zaps) ---
 app.post('/webhook', async (req, res) => {
   const body = req.body;
 
@@ -77,10 +84,10 @@ app.post('/webhook', async (req, res) => {
         resposta = await perguntarParaIA(texto);
       } 
       else if (type === 'audio') {
-        resposta = "Recebi seu audio! (Nesta versao de teste eu ainda nao transcrevo, mas sei que voce mandou audio).";
+        resposta = "🎙️ Recebi seu áudio! (Nesta versão de teste eu ainda não transcrevo, mas sei que você mandou áudio).";
       }
       else {
-        resposta = "Por enquanto so entendo texto, companheiro!";
+        resposta = "Por enquanto só entendo texto, companheiro!";
       }
 
       await sendWhatsAppMessage(from, resposta);
@@ -91,7 +98,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// --- FUNCOES DE ENVIO ---
+// --- FUNÇÕES DE ENVIO ---
 async function sendWhatsAppMessage(to, text) {
   try {
     await axios.post(`https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`, {
@@ -117,4 +124,7 @@ async function markAsRead(id) {
   } catch (e) {}
 }
 
-app.listen(PORT, () => console.log(`AgroZap rodando na porta ${PORT}`));
+// Ligar o servidor (Ouvindo em qualquer endereço 0.0.0.0)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`AgroZap rodando na porta ${PORT}`);
+});
